@@ -10,6 +10,7 @@
 
 #define CLAUSE std::unordered_map<int, clauseInfo>
 #define LITERAL std::unordered_map < int, std::vector <int> >
+#define TRAIL std::vector <trailInfo>
 
 struct clauseInfo {
     bool unit;

@@ -1,6 +1,6 @@
 #include "inc/algorithm.hpp"
 
-state Algorithm::runAlgorithm(CLAUSE clauseList, LITERAL literalList, int clauseCount, int literalCount) {
+state Algorithm::runAlgorithm(CLAUSE clauseList, LITERAL literalList, int clauseCount, int literalCount, TRAIL trail) {
 
     // Step 1. Simplify clauses by running exhaustive unit propagation
     CDCL c(clauseList, literalList, literalCount, clauseCount);

@@ -25,7 +25,7 @@ enum state {
 struct trailInfo {
     int decisionLevel;
     bool isDecisionLiteral;
-    int impliedBy;
+    std::vector<int> impliedBy;
     std::vector<bool> assignments;
 };
 

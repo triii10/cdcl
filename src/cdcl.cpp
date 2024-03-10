@@ -87,7 +87,7 @@ void CDCL::printLiteralList() {
     std::cout << std::endl << "------" << std::endl;
 }
 
-CLAUSE CDCL::exhaustiveUnitPropagation() {
+CLAUSE CDCL::exhaustiveUnitPropagation(CLAUSE& originalClauseList) {
     // Unit propagation will find unit clauses, and for each unit clause, it will go through the literalList
     // to find the clauses where the unit literal appears
     // Then, will apply subsumption elimination to remove the clauses, and remove negative occurances of the literal 
@@ -106,19 +106,22 @@ CLAUSE CDCL::exhaustiveUnitPropagation() {
         if (!unitLiteral)
             break;
 
-        unitPropagation(unitLiteral);
+        CLAUSE result = unitPropagation(unitLiteral, originalClauseList);
+        if (getCurrentState() == UNSAT)
+            return result;
     }
 
     return result;
 }
 
 
-CLAUSE CDCL::unitPropagation(int unitLiteral) {
+CLAUSE CDCL::unitPropagation(int unitLiteral, CLAUSE& originalClauseList) {
     // Unit propagation will find unit clauses, and for each unit clause, it will go through the literalList
     // to find the clauses where the unit literal appears
     // Then, will apply subsumption elimination to remove the clauses, and remove negative occurances of the literal 
 
     CLAUSE& result = clauseList;
+    std::vector<int> impledBy;
 
     if (!unitLiteral)
         return result;
@@ -130,6 +133,9 @@ CLAUSE CDCL::unitPropagation(int unitLiteral) {
     for (int clause: literalList[unitLiteral]) {
         // Do clause elimination
         std::cout << clause << " ";
+
+        if (clauseList[clause].unit)
+            impledBy = getImpliedByClause(unitLiteral, clause, originalClauseList);
         result.erase(clause);
     }
 
@@ -143,9 +149,20 @@ CLAUSE CDCL::unitPropagation(int unitLiteral) {
     }
 
     constructLiteralList();
+
+    // Print impled by
+    std::cout << "Impled By: ";
+    for (int i = 1; i < impledBy.size(); i++) {
+        if (impledBy[i])
+            std::cout << -1 * impledBy[i] * i << " ";
+    }
+
+    char c;
+    getchar();
+
+    addTrailInfo(unitLiteral, impledBy);
     printClauseList();
 
-    clauseList = result;
     return result;
 }
 
@@ -187,13 +204,9 @@ int CDCL::decide() {
     trailInfo tempTrailInfo;
     // tempTrailInfo.assignments = previousTrailInfo.assignments;
     // tempTrailInfo.assignments[abs(decisionLiteral)] = abs(decisionLiteral) == decisionLiteral ? true : false;
-    tempTrailInfo.decisionLevel = currentDecisionLevel + 1;
-    tempTrailInfo.impliedBy = -1;
-    tempTrailInfo.isDecisionLiteral = true;
+    currentDecisionLevel += 1;
 
-    trail.push_back(tempTrailInfo);
-
-    std::cout << "** DECIDE --> " << decisionLiteral << std::endl;
+    std::cout << "** (" << currentDecisionLevel << ")" << " DECIDE --> " << decisionLiteral << std::endl;
 
     return decisionLiteral;
 }
@@ -222,4 +235,35 @@ CLAUSE CDCL::getClauseList() {
 
 LITERAL CDCL::getLiteralList() {
     return literalList;
+}
+
+int CDCL::setCurrentDecisionLevel(int decisionLevel) {
+    currentDecisionLevel = decisionLevel;
+
+    return currentDecisionLevel;
+}
+
+trailInfo CDCL::addTrailInfo(int literal, std::vector<int> impledBy) {
+    trailInfo temp;
+    temp.decisionLevel = currentDecisionLevel;
+    temp.impliedBy = impledBy;
+    temp.isDecisionLiteral = (!impledBy.empty());
+    trail[literal] = temp;
+    return temp;
+}
+
+int CDCL::addDecisionVariableToMap(int decisionLiteral) {
+    decisionLiterals[decisionLiteral] = currentDecisionLevel;
+    return currentDecisionLevel;
+}
+
+std::vector<int> CDCL::getImpliedByClause(int unitLiteral, int clauseNo, CLAUSE& originalClauseList) {
+
+    std::vector<int> tempClause;
+    if (originalClauseList.find(clauseNo) != originalClauseList.end()) {
+        tempClause = originalClauseList[clauseNo].clause;
+        tempClause[abs(unitLiteral)] = 0;
+    }
+
+    return tempClause;
 }

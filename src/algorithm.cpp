@@ -6,7 +6,13 @@ state Algorithm::runAlgorithm(CLAUSE clauseList, LITERAL literalList, int clause
     CDCL c(clauseList, literalList, literalCount, clauseCount);
     c.findUnitClauses();
     // c.printClauseList();
-    std::unordered_map< int, clauseInfo > temp = c.exhaustiveUnitPropagation();
+    CLAUSE temp = c.exhaustiveUnitPropagation(originalClauseList);
+
+    // We want to preserve the original clause list at the beginning of running the algorithm to get the implications
+    if (originalClauseList.empty()) {
+        originalClauseList = temp;
+        originalLiteralList = c.getLiteralList();
+    } 
 
     // Step 2. Get the current state after exhaustive UP
     state currentState;
@@ -22,10 +28,11 @@ state Algorithm::runAlgorithm(CLAUSE clauseList, LITERAL literalList, int clause
     else {
         // Decide a variable
         int decisionLiteral = c.decide();
-        // std::cout << "Decision Literal = " << decisionLiteral << std::endl;
+        c.addDecisionVariableToMap(decisionLiteral);
 
         // Add the decision variable to a new instance of clause list and
         // run the algorithm with that.
+
         CLAUSE tempClauseList = clauseList;
         clauseInfo decisionClauseInfo;
         std::vector<int> tempVector(literalCount+1, 0);
@@ -69,4 +76,11 @@ void Algorithm::printResult(state& currentState) {
         std::cout << std::endl << "UNSATISFIABLE" << std::endl;
     else 
         std::cout << std::endl << "UNDEFINED" << std::endl;
+}
+
+std::vector<int> Algorithm::getImpliedByClause(int unitLiteral, int clauseNo) {
+    std::vector<int> tempClause = originalClauseList[clauseNo].clause;
+    tempClause[abs(unitLiteral)] = 0;
+
+    return tempClause;
 }

@@ -23,14 +23,18 @@ class CDCL {
         std::vector <bool> model;
 
         // To store the trail for backjumping
-        std::vector <trailInfo> trail;
+        std::unordered_map <int, trailInfo> trail;
 
         // Store current decision level
-        int currentDecisionLevel;
+        int currentDecisionLevel = 0;
 
         // Clause and Literal count
         int clauseCount;
         int literalCount;
+
+        std::unordered_map <int, int> decisionLiterals;
+
+        trailInfo addTrailInfo(int, std::vector<int>);
 
     public:
         CDCL(CLAUSE&, LITERAL&, int, int);
@@ -48,9 +52,12 @@ class CDCL {
         state getCurrentState();
         void printCurrentModel();
         std::vector<int> getCurrentModel();
+        int setCurrentDecisionLevel(int);
     
-        std::unordered_map<int, clauseInfo> exhaustiveUnitPropagation();
-        std::unordered_map<int, clauseInfo> unitPropagation(int unitLiteral);
+        std::unordered_map<int, clauseInfo> exhaustiveUnitPropagation(CLAUSE&);
+        std::unordered_map<int, clauseInfo> unitPropagation(int unitLiteral, CLAUSE&);
+        std::vector<int> getImpliedByClause(int, int, CLAUSE&);
+        int addDecisionVariableToMap(int);
         int decide();
         // int runAlgorithm();
         // std::vector <int> getModel();

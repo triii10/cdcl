@@ -1,0 +1,33 @@
+### Starting build.
+# Target: src/gorrila.ml.depends, tags: { extension:ml, file:src/gorrila.ml, ocaml, ocamldep, quiet }
+ocamldep.opt -modules src/gorrila.ml > src/gorrila.ml.depends
+# Target: src/lib.mli.depends, tags: { extension:mli, file:src/lib.mli, ocaml, ocamldep, quiet }
+ocamldep.opt -modules src/lib.mli > src/lib.mli.depends
+# Target: src/options_rnd_gen.mli.depends, tags: { extension:mli, file:src/options_rnd_gen.mli, ocaml, ocamldep, quiet }
+ocamldep.opt -modules src/options_rnd_gen.mli > src/options_rnd_gen.mli.depends
+# Target: src/lib.cmi, tags: { byte, compile, extension:mli, file:src/lib.mli, interf, ocaml, quiet }
+ocamlc.opt -c -I src -o src/lib.cmi src/lib.mli
++ ocamlc.opt -c -I src -o src/lib.cmi src/lib.mli
+File "_none_", line 1:
+Alert ocaml_deprecated_auto_include: 
+OCaml's lib directory layout changed in 5.0. The str subdirectory has been
+automatically added to the search path, but you should add -I +str to the
+command-line to silence this alert (e.g. by adding str to the list of
+libraries in your dune file, or adding use_str to your _tags file for
+ocamlbuild, or using -package str for ocamlfind).
+
+File "_none_", line 1:
+Alert ocaml_deprecated_auto_include: 
+OCaml's lib directory layout changed in 5.0. The unix subdirectory has been
+automatically added to the search path, but you should add -I +unix to the
+command-line to silence this alert (e.g. by adding unix to the list of
+libraries in your dune file, or adding use_unix to your _tags file for
+ocamlbuild, or using -package unix for ocamlfind).
+
+File "src/lib.mli", line 182, characters 0-28:
+182 | exception Termination_Signal
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: Multiple definition of the extension constructor name Termination_Signal.
+       Names must be unique in a given structure or signature.
+Command exited with code 2.
+# Compilation unsuccessful.

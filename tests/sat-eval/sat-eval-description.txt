@@ -1,0 +1,135 @@
+
+
+* Implement a satisfiability solver for propositional logic which accepts problems 
+  in clausal normal form in the DIMACS format. 
+  The implementation should be your own and 
+  you should not copy code from other implementations but can borrow ideas. 
+
+ 
+* Example of a DIMCAS problem is below between "----" lines:
+
+----
+c comment line
+c this is a test problem
+p cnf 3 4
+
+1 0
+-1 2 0
+-1 -2 3 0
+-2 -3 0
+----
+
+  Where lines starting with  "c" are comment lines, you can ignore them.
+  Line "p cnf 3 4" 
+  indicates that there are 3 variables and 4 clauses in the problem.
+  Literals are represented by numbers 1 is positive literal -1 negative literal   
+  clauses are written as a sequence of literals separated by spaces, 
+  each clause is written on one line terminated by "0".
+  See also: 
+    http://logic.pdmi.ras.ru/~basolver/dimacs.html
+
+ 
+* you can use any programming language, but your solver should be compilable 
+  under Linux on the School lab computers using one command,
+  you can use a Makefile or a bash script for this.
+  
+* solver should accept problems from the standard input and  
+  solver's output should contain a result line which is one of:
+
+SATISFIABLE
+UNSATISFIABLE
+UNKNOWN
+  
+* one should be able to run your solver with the following command line
+
+    cat problem.cnf | your_solver_name 
+
+
+* solver should be sound i.e. output only correct results, 
+  but can be incomplete: it can output "UNKNOWN", or no result
+
+
+* your code should be well documented with comments
+
+------------------------------------------
+ Testing and evaluating your system: 
+------------------------------------------
+* unzip sat-eval.zip 
+
+* run
+
+  g-test <set> <out_dir> <solver-name>
+
+  where <set>: simple, medium, hard
+   
+  For example if your solver is my_dpll then 
+  
+   g-test simple out_dir ./my_dpll 
+
+   should produce at the end somthing like: 
+
+-----------------------------------------------------------------
+input solver(s) sat: 129 avg. 0. unsat: 81 avg. 0. unknown: 0 killed: 0
+"./my_solver" sat: 129 avg. 0. unsat: 81 avg. 0. unknown: 0 killed: 0
+"./my_solver" better: 0 worse: 0 same: 210 inconsistencies: 0
+-----------------------------------------------------------------
+
+* If the number of "inconsistencies:" is not 0 then your solver produce worng results. 
+
+  You can find the problematic problems by looking at the logs in the out_dir and 
+  cnf of the needed problem in the directory dpll_tests/simple dpll_tests/medium or dpll_tests/hard   
+
+* If you have all problems are  "unknown:" then most likely your solver does not return correct output string 
+  or does not accpet cnf in the stdin. 
+
+You can try by hand e.g.: 
+
+cat dpll_tests/simple/prop_rnd_129735_v_3_c_12_vic_1_4.cnf | you_solver
+
+should return:
+
+UNSATISFIABLE
+
+cat dpll_tests/simple/prop_rnd_962258_v_5_c_21_vic_2_4.cnf | your_solver
+
+should return:
+
+SATISFIABLE
+
+----------------------------------------                   
+Submission instructions will be posted on the Blackboard.
+----------------------------------------
+
+You are encouraged to research advanced techniques for SAT 
+and study code of other solvers (without copying the code).
+
+----------------------------------------
+   Below some useful references:      
+----------------------------------------
+
+Slides and videos on Blackboard of the course. 
+
+Excellent paper on modern DPLL SAT and SMT solvers:
+http://homepage.cs.uiowa.edu/~tinelli/papers/NieOT-JACM-06.pdf
+
+Expositiory paper: 
+http://poincare.matf.bg.ac.rs/~filip/phd/sat-tutorial.pdf
+
+Sildes by Marijn Heule
+http://www.cs.cmu.edu/~mheule/15816-f20/slides/CDCL.pdf
+
+Paper on implementation of MiniSAT which  
+contains most of the advanced techniques for implementing DPLL. 
+
+http://minisat.se/downloads/MiniSat.pdf
+
+
+CDCL Solvers:
+-----------------
+
+MiniSAT http://minisat.se/
+
+Cleaneling http://fmv.jku.at/cleaneling/
+
+
+

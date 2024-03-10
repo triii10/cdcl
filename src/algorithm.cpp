@@ -43,12 +43,18 @@ state Algorithm::runAlgorithm(CLAUSE clauseList, LITERAL literalList, int clause
             return newCurrentState;
             
         // If it is unsatisfiable, then we flip the decision variable, and run the algorithm again.
+        // FOR CDCL -- if it is unsat, and the current decision level is the one to flip, then flip it and return result
+
+        // To add some if condition to check backjumping level, below code remains same
         tempClauseList = clauseList;
         tempVector[abs(decisionLiteral)] = (-1*decisionLiteral)/abs(decisionLiteral);
         decisionClauseInfo.clause = tempVector;
         decisionClauseInfo.unitLiteral = -1 * decisionLiteral;
         tempClauseList[clauseCount+1] = decisionClauseInfo;
         return runAlgorithm(tempClauseList, literalList, clauseCount+1, literalCount);
+
+        // If not backjump level, return to previous level
+        // To add some code to implement that
     }
 
     return currentState;

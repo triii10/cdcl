@@ -4,6 +4,8 @@
 #include <unordered_map>
 #include <type_traits>
 #include <iostream>
+#include <algorithm>
+#include <cmath>
 
 
 #define CLAUSE std::unordered_map<int, clauseInfo>

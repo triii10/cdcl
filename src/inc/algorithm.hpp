@@ -1,9 +1,9 @@
 #include "cdcl.hpp"
+#include "io.hpp"
 
 class Algorithm {
 
     public:
-        void runAlgorithm();
-        
-        
+        state runAlgorithm(CLAUSE, LITERAL, int, int);
+        void printResult(state&);
 };

@@ -6,9 +6,10 @@ class Dimacs {
     
     private:
     int countVar, countClauses;
+    std::vector< std::vector <int> > rawInputList;
 
     public:
-    void Input();
+    void Input(CLAUSE&, LITERAL&);
     void Output();
     int getVarCount();
     int getClauseCount();

@@ -1,8 +1,6 @@
 #include "cdcl.hpp"
 #include <iostream>
 
-#define CLAUSE std::unordered_map<int, clauseInfo>
-#define LITERAL std::unordered_map < int, std::vector <int> >
 
 std::ostream& operator<<(std::ostream& os, const CLAUSE& container) {
   os << "[";
@@ -16,49 +14,14 @@ std::ostream& operator<<(std::ostream& os, const CLAUSE& container) {
   return os;
 }
 
-CDCL::CDCL(std::vector< std::vector<int> > inputList, int variableCount, int clauseCount) {
-    
-    model = std::vector <bool> (variableCount+1, false);
+CDCL::CDCL(CLAUSE& clauseListCopied, LITERAL& literalListCopied, int variableCount, int clauseCount) {
 
-    for (int clause = 0; clause < inputList.size(); clause++) {
-
-        std::vector <int> tempClause(variableCount+1, 0);     // Initialize a temp clause with all 0
-
-        bool invalid = false;
-        for (int literal = 0; literal < inputList[clause].size(); literal++) {
-            int literalNo = inputList[clause][literal];
-            int absLiteralNo = abs(literalNo);
-            // If the literal already exists, and had a sign different than the one being added currently, 
-            // then this clause is already true, so we may as well discard the clause.
-            if (tempClause[absLiteralNo] != 0 && (std::signbit(tempClause[absLiteralNo]) ^ std::signbit(literalNo))) {
-                invalid = true;
-                break;
-            }
-            tempClause[absLiteralNo] = (literalNo/absLiteralNo);
-
-            // Now add an entry for this clause in the literalList
-            if (literalList.find(literalNo) == literalList.end())
-                literalList[literalNo] = {clause};
-
-            if(!std::count(literalList[literalNo].begin(), literalList[literalNo].end(), clause))
-                literalList[literalNo].push_back(clause);
-        }
-
-        if (invalid)
-            continue;
-
-        clauseInfo tempClauseInfo;
-        tempClauseInfo.unit=false;
-        tempClauseInfo.unitLiteral=0;
-        tempClauseInfo.clause=tempClause;
-
-        clauseList[clause] = tempClauseInfo;
-    }
-}
-
-CDCL::CDCL(CLAUSE& clauseListCopied, LITERAL& literalListCopied) {
     clauseList = clauseListCopied;
     literalList = literalListCopied;
+
+    model = std::vector <bool> (variableCount+1, false);
+    literalCount = variableCount;
+    this->clauseCount = clauseCount;
 }
 
 int CDCL::findUnitClauses() {
@@ -67,6 +30,7 @@ int CDCL::findUnitClauses() {
 
     bool anyUnitClauseExists = false;
 
+    constructLiteralList();
     for (CLAUSE::const_iterator it = clauseList.begin(); it != clauseList.end(); it++) {
         bool hasUnitClause = false;
         int unitClauseNo = -1;
@@ -78,14 +42,15 @@ int CDCL::findUnitClauses() {
                     break;
                 }
 
-                anyUnitClauseExists = true;
                 hasUnitClause = true;
                 unitClauseNo = it->second.clause[literalInClause]*literalInClause;
             }
         }
-        if (hasUnitClause)
+        if (hasUnitClause) {
             clauseList[it->first].unitLiteral = unitClauseNo;
-            clauseList[it->first].unit = hasUnitClause;
+            clauseList[it->first].unit = true;
+            anyUnitClauseExists = true;
+        }
     }
 
     return anyUnitClauseExists;
@@ -106,7 +71,7 @@ void CDCL::printClauseList(const CLAUSE& passedClauseList) {
         }
         std::cout << std::endl;
     }
-    std::cout << std::endl << "------" << std::endl;
+    std::cout << "------" << std::endl;
 }
 
 void CDCL::printLiteralList() {
@@ -122,56 +87,79 @@ void CDCL::printLiteralList() {
     std::cout << std::endl << "------" << std::endl;
 }
 
-CLAUSE CDCL::unitPropagation() {
+CLAUSE CDCL::exhaustiveUnitPropagation() {
     // Unit propagation will find unit clauses, and for each unit clause, it will go through the literalList
     // to find the clauses where the unit literal appears
     // Then, will apply subsumption elimination to remove the clauses, and remove negative occurances of the literal 
 
     CLAUSE& result = clauseList;
-    int unitLiteral = 0;
-    for (CLAUSE::const_iterator it = clauseList.begin(); it != clauseList.end(); it++) {
-        clauseInfo tempClauseInfo = it->second;
-        if (tempClauseInfo.unit) {
-            unitLiteral = tempClauseInfo.unitLiteral;
-            break;
+    while (findUnitClauses()) {
+        int unitLiteral = 0;
+        for (CLAUSE::const_iterator it = clauseList.begin(); it != clauseList.end(); it++) {
+            clauseInfo tempClauseInfo = it->second;
+            if (tempClauseInfo.unit) {
+                unitLiteral = tempClauseInfo.unitLiteral;
+                break;
+            }
         }
+
+        if (!unitLiteral)
+            break;
+
+        unitPropagation(unitLiteral);
     }
 
+    return result;
+}
+
+
+CLAUSE CDCL::unitPropagation(int unitLiteral) {
+    // Unit propagation will find unit clauses, and for each unit clause, it will go through the literalList
+    // to find the clauses where the unit literal appears
+    // Then, will apply subsumption elimination to remove the clauses, and remove negative occurances of the literal 
+
+    CLAUSE& result = clauseList;
+
+    if (!unitLiteral)
+        return result;
+
     // First perform subsumption elimination of positive literal to remove clauses
-    std::cout << "UP: " << unitLiteral << std::endl;
+    std::cout << std::endl << "** UP: " << unitLiteral << " --> ";
     model[abs(unitLiteral)] = (abs(unitLiteral) == unitLiteral);
 
     for (int clause: literalList[unitLiteral]) {
         // Do clause elimination
+        std::cout << clause << " ";
         result.erase(clause);
     }
 
+    std::cout << ", (-) ";
     for (int clause: literalList[-1 * unitLiteral]) {
         // Do negative literal elimination
         if(result.find(clause) != clauseList.end()) {
+            std::cout << clause << " ";
             result[clause].clause[abs(unitLiteral)] = 0;
         }
     }
-    if (findUnitClauses()) {
-        printClauseList();
-        return unitPropagation();
-    }
 
     constructLiteralList();
+    printClauseList();
 
-    std::cout << model;
+    clauseList = result;
     return result;
 }
+
 
 int CDCL::constructLiteralList() {
 
     LITERAL tempLiteralList;
     for (CLAUSE::const_iterator it = clauseList.begin(); it != clauseList.end(); it++) {
         for (int i = 1; i < it->second.clause.size(); i++){
-            if (it->second.clause[i] && (tempLiteralList.find(1) == tempLiteralList.end()))
-                tempLiteralList[it->second.clause[i]*i] = {it->first};
+            int selectedLiteral = it->second.clause[i]*i;
+            if ((it->second.clause[i] != 0) && (tempLiteralList.find(selectedLiteral) == tempLiteralList.end()))
+                tempLiteralList[selectedLiteral] = {it->first};
 
-            if(it->second.clause[i] && !std::count(tempLiteralList[it->second.clause[i]*i].begin(), tempLiteralList[it->second.clause[i]*i].end(), it->first))
+            if((it->second.clause[i] != 0) && !std::count(tempLiteralList[selectedLiteral].begin(), tempLiteralList[selectedLiteral].end(), it->first))
                 tempLiteralList[it->second.clause[i]*i].push_back(it->first);
         }
     }
@@ -180,28 +168,58 @@ int CDCL::constructLiteralList() {
     return 1;
 }
 
-int CDCL::isConflictPresent(state& currentState) {
+int CDCL::isConflictPresent() {
     for (CLAUSE::const_iterator it = clauseList.begin(); it != clauseList.end(); it++) {
         bool isConflictClause = true;
         for (int i = 1; i < it->second.clause.size(); i++) {
             isConflictClause = isConflictClause && !it->second.clause[i];
         }
         if (isConflictClause) {
-            currentState = UNSAT;
             return it->first;
         }
     }
-    currentState = UNDEF;
     return -1;
 }
 
-int CDCL::decide(trailInfo previousTrailInfo) {
+int CDCL::decide() {
     int decisionLiteral = literalList.cbegin()->first;
 
     trailInfo tempTrailInfo;
-    tempTrailInfo.decisionLevel = previousTrailInfo.decisionLevel + 1;
-    tempTrailInfo.assignments = previousTrailInfo.assignments;
-    tempTrailInfo.assignments[abs(decisionLiteral)] = abs(decisionLiteral) == decisionLiteral ? true : false;
+    // tempTrailInfo.assignments = previousTrailInfo.assignments;
+    // tempTrailInfo.assignments[abs(decisionLiteral)] = abs(decisionLiteral) == decisionLiteral ? true : false;
+    tempTrailInfo.decisionLevel = currentDecisionLevel + 1;
+    tempTrailInfo.impliedBy = -1;
+    tempTrailInfo.isDecisionLiteral = true;
 
     trail.push_back(tempTrailInfo);
+
+    std::cout << "** DECIDE --> " << decisionLiteral << std::endl;
+
+    return decisionLiteral;
+}
+
+state CDCL::getCurrentState() {
+    
+    if (isConflictPresent() >= 0)
+        return UNSAT;
+    if (clauseList.empty())
+        return SAT;
+
+    return UNDEF;
+}
+
+void CDCL::printCurrentModel() {
+    std::cout << std::endl << std::endl << "--- MODEL ---" << std::endl;
+    for (int i = 1; i < model.size(); i++) {
+        std::cout << i << " --> " << model[i] << std::endl;
+    }
+    std::cout << "---" << std::endl;
+}
+
+CLAUSE CDCL::getClauseList() {
+    return clauseList;
+}
+
+LITERAL CDCL::getLiteralList() {
+    return literalList;
 }

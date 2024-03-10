@@ -13,10 +13,10 @@ DEPS = $(IDIR)/%.hpp
 
 all: main
 
-_DEPS = io.hpp main.hpp structure.hpp cdcl.hpp
+_DEPS = io.hpp main.hpp structure.hpp cdcl.hpp algorithm.hpp
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = io.o main.o cdcl.o
+_OBJ = io.o main.o cdcl.o algorithm.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: $(SRCDIR)/%.cpp $(DEPS)

@@ -25,21 +25,33 @@ class CDCL {
         // To store the trail for backjumping
         std::vector <trailInfo> trail;
 
-    public:
-        CDCL(std::vector< std::vector<int> >, int, int);
-        CDCL(std::unordered_map< int, clauseInfo >&, std::unordered_map< int, std::vector<int> >&);
+        // Store current decision level
+        int currentDecisionLevel;
 
+        // Clause and Literal count
+        int clauseCount;
+        int literalCount;
+
+    public:
+        CDCL(CLAUSE&, LITERAL&, int, int);
         void printClauseList(const std::unordered_map< int, clauseInfo >&);
         void printClauseList();
+
+        CLAUSE getClauseList();
+        LITERAL getLiteralList();
 
         int constructLiteralList();
         void printLiteralList();
 
         int findUnitClauses();
-        int isConflictPresent(state&);
+        int isConflictPresent();
+        state getCurrentState();
+        void printCurrentModel();
+        std::vector<int> getCurrentModel();
     
-        std::unordered_map<int, clauseInfo> unitPropagation();
-        int decide(trailInfo);
+        std::unordered_map<int, clauseInfo> exhaustiveUnitPropagation();
+        std::unordered_map<int, clauseInfo> unitPropagation(int unitLiteral);
+        int decide();
         // int runAlgorithm();
         // std::vector <int> getModel();
 };

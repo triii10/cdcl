@@ -5,7 +5,9 @@
 #include <type_traits>
 #include <iostream>
 
-static std::vector< std::vector<int> > clauseList;
+
+#define CLAUSE std::unordered_map<int, clauseInfo>
+#define LITERAL std::unordered_map < int, std::vector <int> >
 
 struct clauseInfo {
     bool unit;
@@ -19,6 +21,8 @@ enum state {
 
 struct trailInfo {
     int decisionLevel;
+    bool isDecisionLiteral;
+    int impliedBy;
     std::vector<bool> assignments;
 };
 

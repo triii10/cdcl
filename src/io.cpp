@@ -22,7 +22,7 @@ void Dimacs::Input(CLAUSE& clauseList, LITERAL& literalList) {
             strStream >> countVar;
             strStream >> countClauses;
 
-            // std::cout << "Number of clauses: "<< countClauses << "\nNumber of variables: "<< countVar;
+            std::cout << "Number of clauses: "<< countClauses << "\nNumber of variables: "<< countVar;
             break;
         }
     }
@@ -84,6 +84,18 @@ void Dimacs::Input(CLAUSE& clauseList, LITERAL& literalList) {
     }
 
 }
+
+
+// void Dimacs::Output() {
+//     std::cout << "\nThe clauses are: \n";
+//     for (int i = 0; i < countClauses; i++) {
+//         for (int j = 0; j < clauseList[i].size(); j++) {
+//             std::cout << clauseList[i][j] << " ";
+//         }
+//         std::cout << "\n";
+//     }
+// }
+
 
 int Dimacs::getClauseCount() {
     return countClauses;

@@ -9,6 +9,10 @@ resultStruct Algorithm::runAlgorithm(CLAUSE clauseList, LITERAL literalList, int
     c.findUnitClauses();
     // Set the decision level
     c.setCurrentDecisionLevel(currentDecisionLevel);
+    if (currentDecisionLevel == 0) {
+        c.printClauseList();
+        c.printLiteralList();
+    }
 
     CLAUSE newClauseList = c.exhaustiveUnitPropagation(originalClauseList);
 
@@ -16,7 +20,6 @@ resultStruct Algorithm::runAlgorithm(CLAUSE clauseList, LITERAL literalList, int
     if (originalClauseList.empty()) {
         originalClauseList = newClauseList;
         originalLiteralList = c.getLiteralList();
-        c.printClauseList();
     } 
 
     // Step 2. Get the current state after exhaustive UP

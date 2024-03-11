@@ -2,7 +2,7 @@
 
 resultStruct Algorithm::runAlgorithm(CLAUSE clauseList, LITERAL literalList, int clauseCount, int literalCount, int currentDecisionLevel, std::unordered_map<int, int> previousDecisionList, std::vector <trailInfo> previousTrailInfo) {
 
-    resultStruct result = {.currentState = UNDEF, .backjumpLevel = 0, .conflictClause = {}};
+    resultStruct result = {.currentState = UNDEF, .conflictClause = {}, .backjumpLevel = 0};
 
     // Step 1. Simplify clauses by running exhaustive unit propagation
     CDCL c(clauseList, literalList, literalCount, clauseCount, previousDecisionList, previousTrailInfo);
@@ -59,7 +59,7 @@ resultStruct Algorithm::runAlgorithm(CLAUSE clauseList, LITERAL literalList, int
         CLAUSE tempClauseList = newClauseList;
         std::vector<int> tempVector(literalCount+1, 0);
         tempVector[abs(decisionLiteral)] = decisionLiteral/abs(decisionLiteral);
-        tempClauseList[clauseCount + 1] = {.clause = tempVector, .unit = true, .unitLiteral = decisionLiteral};
+        tempClauseList[clauseCount + 1] = {.unit = true, .unitLiteral = decisionLiteral, .clause = tempVector};
 
         resultStruct newCurrentState = runAlgorithm(tempClauseList, literalList, clauseCount + 1, literalCount, currentDecisionLevel + 1, c.getLiteralDecisionLevelList(), c.getTrailInfo());
 
@@ -73,8 +73,8 @@ resultStruct Algorithm::runAlgorithm(CLAUSE clauseList, LITERAL literalList, int
 
         if (newCurrentState.currentState == UNSAT && newCurrentState.backjumpLevel == currentDecisionLevel + 1) {
             tempVector[abs(decisionLiteral)] = -decisionLiteral/abs(decisionLiteral);
-            tempClauseList[clauseCount + 1] = {.clause = newCurrentState.conflictClause, .unit = false};
-            tempClauseList[clauseCount + 2] = {.clause = tempVector, .unit = true, .unitLiteral = -decisionLiteral};
+            tempClauseList[clauseCount + 1] = {.unit = false, .unitLiteral = 0,.clause = newCurrentState.conflictClause};
+            tempClauseList[clauseCount + 2] = {.unit = true, .unitLiteral = -decisionLiteral, .clause = tempVector};
             originalClauseList[clauseCount + 1] = tempClauseList[clauseCount + 1];
             return runAlgorithm(tempClauseList, literalList, clauseCount + 2, literalCount, currentDecisionLevel + 1, c.getLiteralDecisionLevelList(), c.getTrailInfo());
         }

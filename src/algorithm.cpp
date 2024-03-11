@@ -27,7 +27,7 @@ resultStruct Algorithm::runAlgorithm(CLAUSE clauseList, LITERAL literalList, int
             c.printCurrentModel();
         }
 
-        if (result.currentState == UNSAT) {
+        if (currentDecisionLevel && result.currentState == UNSAT) {
             // Need to find the conflict clause and return UNSAT to the correct backjump level
             // First find conflict clause
             //  //  What do we need for conflict clause? 

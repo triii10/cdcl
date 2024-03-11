@@ -14,7 +14,7 @@ std::ostream& operator<<(std::ostream& os, const CLAUSE& container) {
   return os;
 }
 
-CDCL::CDCL(CLAUSE& clauseListCopied, LITERAL& literalListCopied, int variableCount, int clauseCount) {
+CDCL::CDCL(CLAUSE& clauseListCopied, LITERAL& literalListCopied, int variableCount, int clauseCount, std::unordered_map<int, int> previousDecisionLiteralList, std::vector <trailInfo> previousTrailInfo) {
 
     clauseList = clauseListCopied;
     literalList = literalListCopied;
@@ -22,6 +22,8 @@ CDCL::CDCL(CLAUSE& clauseListCopied, LITERAL& literalListCopied, int variableCou
     model = std::vector <bool> (variableCount+1, false);
     literalCount = variableCount;
     this->clauseCount = clauseCount;
+    literalDecisionLevel = previousDecisionLiteralList;
+    trail = previousTrailInfo;
 }
 
 int CDCL::findUnitClauses() {
@@ -106,7 +108,7 @@ CLAUSE CDCL::exhaustiveUnitPropagation(CLAUSE& originalClauseList) {
         if (!unitLiteral)
             break;
 
-        CLAUSE result = unitPropagation(unitLiteral, originalClauseList);
+        result = unitPropagation(unitLiteral, originalClauseList);
         if (getCurrentState() == UNSAT)
             return result;
     }
@@ -120,50 +122,47 @@ CLAUSE CDCL::unitPropagation(int unitLiteral, CLAUSE& originalClauseList) {
     // to find the clauses where the unit literal appears
     // Then, will apply subsumption elimination to remove the clauses, and remove negative occurances of the literal 
 
-    CLAUSE& result = clauseList;
     std::vector<int> impledBy;
 
     if (!unitLiteral)
-        return result;
+        return clauseList;
 
     // First perform subsumption elimination of positive literal to remove clauses
-    std::cout << std::endl << "** UP: " << unitLiteral << " --> ";
+    std::cout << std::endl << "** (" << currentDecisionLevel << ") UP: " << unitLiteral << " --> ";
     model[abs(unitLiteral)] = (abs(unitLiteral) == unitLiteral);
 
+    addDecisionLevelToMap(unitLiteral);
     for (int clause: literalList[unitLiteral]) {
         // Do clause elimination
         std::cout << clause << " ";
 
         if (clauseList[clause].unit)
             impledBy = getImpliedByClause(unitLiteral, clause, originalClauseList);
-        result.erase(clause);
+        clauseList.erase(clause);
     }
 
     std::cout << ", (-) ";
     for (int clause: literalList[-1 * unitLiteral]) {
         // Do negative literal elimination
-        if(result.find(clause) != clauseList.end()) {
+        if(clauseList.find(clause) != clauseList.end()) {
             std::cout << clause << " ";
-            result[clause].clause[abs(unitLiteral)] = 0;
+            clauseList[clause].clause[abs(unitLiteral)] = 0;
         }
     }
 
     constructLiteralList();
 
     // Print impled by
-    std::cout << "Impled By: ";
+    std::cout << "Implied By: ";
     for (int i = 1; i < impledBy.size(); i++) {
         if (impledBy[i])
             std::cout << -1 * impledBy[i] * i << " ";
     }
 
-    char c;
-    getchar();
-
     addTrailInfo(unitLiteral, impledBy);
     printClauseList();
 
-    return result;
+    return clauseList;
 }
 
 
@@ -200,13 +199,8 @@ int CDCL::isConflictPresent() {
 
 int CDCL::decide() {
     int decisionLiteral = literalList.cbegin()->first;
-
-    trailInfo tempTrailInfo;
-    // tempTrailInfo.assignments = previousTrailInfo.assignments;
-    // tempTrailInfo.assignments[abs(decisionLiteral)] = abs(decisionLiteral) == decisionLiteral ? true : false;
     currentDecisionLevel += 1;
-
-    std::cout << "** (" << currentDecisionLevel << ")" << " DECIDE --> " << decisionLiteral << std::endl;
+    std::cout << std::endl << "** (" << currentDecisionLevel << ")" << " DECIDE --> " << decisionLiteral << std::endl;
 
     return decisionLiteral;
 }
@@ -243,17 +237,23 @@ int CDCL::setCurrentDecisionLevel(int decisionLevel) {
     return currentDecisionLevel;
 }
 
+int CDCL::getCurrentDecisionLevel() {
+
+    return currentDecisionLevel;
+}
+
 trailInfo CDCL::addTrailInfo(int literal, std::vector<int> impledBy) {
     trailInfo temp;
+    temp.literal = literal;
     temp.decisionLevel = currentDecisionLevel;
     temp.impliedBy = impledBy;
-    temp.isDecisionLiteral = (!impledBy.empty());
-    trail[literal] = temp;
+    temp.isDecisionLiteral = (impledBy.empty() && currentDecisionLevel);
+    trail.push_back(temp);
     return temp;
 }
 
-int CDCL::addDecisionVariableToMap(int decisionLiteral) {
-    decisionLiterals[decisionLiteral] = currentDecisionLevel;
+int CDCL::addDecisionLevelToMap(int literal) {
+    literalDecisionLevel[literal] = currentDecisionLevel;
     return currentDecisionLevel;
 }
 
@@ -266,4 +266,119 @@ std::vector<int> CDCL::getImpliedByClause(int unitLiteral, int clauseNo, CLAUSE&
     }
 
     return tempClause;
+}
+
+
+std::vector<int> CDCL::findConflictClause(CLAUSE& originalClauseList) {
+    // I have chosen "tri-asserting clause" as the conflict clause.
+
+    // We need to find the impledBy for the UP literal which caused the empty clause
+    // And empty clause itself, which contains the negation of the UP literal
+    // The conflict clause will be the negation of the impledBy literals of both the UP and negation UP clauses 
+
+    // We can get the impledBy literals of the current UP literal by just looking at the trail stack
+    trailInfo lastUpLiteralInfo = trail[trail.size() - 1];
+    std::vector <int> upImpledBy = lastUpLiteralInfo.impliedBy;
+
+    // To get the impliedBy of the negation of the UP literal, we need the empty clause.
+    int emptyClause = isConflictPresent();
+    std::vector <int> negationUpImpledBy = getImpliedByClause(lastUpLiteralInfo.literal, emptyClause, originalClauseList);
+
+    // Try 2 - will find the last unique implication point
+    // For this, we need to see all the decision variables in the trail
+    std::vector <trailInfo> consolidatedTrailInfo = {};
+    std::vector <trailInfo> tempTrailInfo = {};
+    for (int i = 0; i < negationUpImpledBy.size(); i++) {
+        if (negationUpImpledBy[i]) {
+            // std::cout << -negationUpImpledBy[i]*i;
+            std::vector <trailInfo> tempTrailInfo = findRoots(-negationUpImpledBy[i]*i);
+            consolidatedTrailInfo.insert(consolidatedTrailInfo.end(), tempTrailInfo.begin(), tempTrailInfo.end());
+        }
+        if (upImpledBy[i]) {
+            std::vector <trailInfo> tempTrailInfo = findRoots(-upImpledBy[i]*i);
+            consolidatedTrailInfo.insert(consolidatedTrailInfo.end(), tempTrailInfo.begin(), tempTrailInfo.end());
+        }
+    }
+
+    std::vector <trailInfo> uniqueConsolidatedTrailInfo = {};
+    std::unordered_map <int, bool> alreadyAdded;
+    
+    for (int i = 0; i < consolidatedTrailInfo.size(); i++) {
+        int rootLiteral = consolidatedTrailInfo[i].literal;
+        if (alreadyAdded.find(rootLiteral) == alreadyAdded.end()) {
+            uniqueConsolidatedTrailInfo.push_back(consolidatedTrailInfo[i]);
+            alreadyAdded[rootLiteral] = true;
+        }
+    }
+
+    // std::cout << std::endl << "Decision levels in trail are - ";
+    // for (int i = 0; i < trail.size(); i++) {
+    //     std::cout << trail[i].literal << (trail[i].isDecisionLiteral ? "(D)" : "") << "->" << trail[i].decisionLevel << " ";
+    // }
+    // std::cout << std::endl;
+
+    // // Let's print this now
+    // std::cout << std::endl << "Roots are - ";
+    // for (int i = 0; i < uniqueConsolidatedTrailInfo.size(); i++) {
+    //     std::cout << uniqueConsolidatedTrailInfo[i].literal << "->" << uniqueConsolidatedTrailInfo[i].decisionLevel << " ";
+    // }
+    // std::cout << std::endl;
+
+    // Now construct the conflict clause
+    std::vector <int> conflictClause (upImpledBy.size(), 0);
+    std::cout << std::endl << "--- CONFLICT CLAUSE : ";
+    for (int i = 0; i < uniqueConsolidatedTrailInfo.size(); i++) {
+        int rootLiteral = -uniqueConsolidatedTrailInfo[i].literal;
+        conflictClause[abs(rootLiteral)] = rootLiteral/abs(rootLiteral);
+        std::cout << rootLiteral << " ";
+    }
+    std::cout << std::endl;
+
+    return conflictClause;
+}
+
+int CDCL::getBackjumpLevel(std::vector <int> conflictClause, int conflictDecisionLevel) {
+
+    int maxDecisionLevel = 0;
+    // Get the maximum decision level of conflict clause
+    // std::cout << "All Decision Levels: ";
+    // for (std::unordered_map<int, int>::const_iterator it = literalDecisionLevel.begin(); it != literalDecisionLevel.end(); it++)
+    //     std::cout << it->first << "->" << it->second << ",";
+    
+    std::cout << "Decision Levels: ";
+    for (int i = 1; i < conflictClause.size(); i++) {
+        if (conflictClause[i]){
+            int currentLiteral = -i*conflictClause[i];
+            int decisionLevel = literalDecisionLevel[currentLiteral];
+            std::cout << decisionLevel << " ";
+            if (decisionLevel != conflictDecisionLevel && decisionLevel > maxDecisionLevel)
+                maxDecisionLevel = decisionLevel;
+        }
+    }
+    std::cout << std::endl;
+    return maxDecisionLevel;
+}
+
+std::vector <trailInfo> CDCL::findRoots(int literal) {
+
+    std::vector <trailInfo> consolidatedTrailInfo;
+    for (int i = 0; i < trail.size(); i++) {
+        if (trail[i].literal == literal) {
+            if (trail[i].isDecisionLiteral) 
+                consolidatedTrailInfo.push_back(trail[i]);
+            else {
+                for (int j = 1; j < trail[i].impliedBy.size(); j++) {
+                    std::vector <trailInfo> tempTrailInfo = {};
+                    if (trail[i].impliedBy[j])
+                        tempTrailInfo = findRoots(-trail[i].impliedBy[j]*j);
+                    consolidatedTrailInfo.insert(consolidatedTrailInfo.end(), tempTrailInfo.begin(), tempTrailInfo.end());
+                }
+            }
+            break;
+        }
+    }
+
+    // for (int i = 0; i < consolidatedTrailInfo.size(); i++)
+    //     std::cout << consolidatedTrailInfo[i].literal << " ";
+    return consolidatedTrailInfo;
 }

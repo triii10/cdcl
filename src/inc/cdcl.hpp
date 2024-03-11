@@ -23,7 +23,7 @@ class CDCL {
         std::vector <bool> model;
 
         // To store the trail for backjumping
-        std::unordered_map <int, trailInfo> trail;
+        std::vector <trailInfo> trail;
 
         // Store current decision level
         int currentDecisionLevel = 0;
@@ -32,12 +32,12 @@ class CDCL {
         int clauseCount;
         int literalCount;
 
-        std::unordered_map <int, int> decisionLiterals;
+        std::unordered_map <int, int> literalDecisionLevel;
 
         trailInfo addTrailInfo(int, std::vector<int>);
 
     public:
-        CDCL(CLAUSE&, LITERAL&, int, int);
+        CDCL(CLAUSE&, LITERAL&, int, int, std::unordered_map<int, int> = {}, std::vector <trailInfo> = {});
         void printClauseList(const std::unordered_map< int, clauseInfo >&);
         void printClauseList();
 
@@ -53,12 +53,22 @@ class CDCL {
         void printCurrentModel();
         std::vector<int> getCurrentModel();
         int setCurrentDecisionLevel(int);
+        int getCurrentDecisionLevel();
+        int getBackjumpLevel(std::vector <int>, int);
+        std::unordered_map<int, int> getLiteralDecisionLevelList() {
+            return literalDecisionLevel;
+        };
+        std::vector <trailInfo> getTrailInfo() {
+            return trail;
+        };
     
         std::unordered_map<int, clauseInfo> exhaustiveUnitPropagation(CLAUSE&);
         std::unordered_map<int, clauseInfo> unitPropagation(int unitLiteral, CLAUSE&);
         std::vector<int> getImpliedByClause(int, int, CLAUSE&);
-        int addDecisionVariableToMap(int);
+        int addDecisionLevelToMap(int);
         int decide();
+        std::vector<int> findConflictClause(CLAUSE&);
+        std::vector<trailInfo> findRoots(int);
         // int runAlgorithm();
         // std::vector <int> getModel();
 };

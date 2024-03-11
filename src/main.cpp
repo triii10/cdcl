@@ -10,8 +10,8 @@ int main(int argc, char const *argv[])
     inp.Input(c, l);
 
     Algorithm A;
-    state S = A.runAlgorithm(c, l, inp.getClauseCount(), inp.getVarCount());
-    A.printResult(S);
+    resultStruct S = A.runAlgorithm(c, l, inp.getClauseCount(), inp.getVarCount());
+    A.printResult(S.currentState);
 
 
     // Dimacs A;

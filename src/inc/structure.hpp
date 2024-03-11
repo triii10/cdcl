@@ -23,10 +23,11 @@ enum state {
 };
 
 struct trailInfo {
-    int decisionLevel;
-    bool isDecisionLiteral;
-    std::vector<int> impliedBy;
-    std::vector<bool> assignments;
+  int literal;
+  int decisionLevel;
+  bool isDecisionLiteral;
+  std::vector<int> impliedBy;
+  std::vector<bool> assignments;
 };
 
 // by default you declare that no type is a container

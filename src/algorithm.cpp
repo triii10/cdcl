@@ -1,16 +1,20 @@
 #include "inc/algorithm.hpp"
 
-state Algorithm::runAlgorithm(CLAUSE clauseList, LITERAL literalList, int clauseCount, int literalCount, TRAIL trail) {
+resultStruct Algorithm::runAlgorithm(CLAUSE clauseList, LITERAL literalList, int clauseCount, int literalCount, int currentDecisionLevel, std::unordered_map<int, int> previousDecisionList, std::vector <trailInfo> previousTrailInfo) {
+
+    resultStruct result = {.currentState = UNDEF, .backjumpLevel = 0, .conflictClause = {}};
 
     // Step 1. Simplify clauses by running exhaustive unit propagation
-    CDCL c(clauseList, literalList, literalCount, clauseCount);
+    CDCL c(clauseList, literalList, literalCount, clauseCount, previousDecisionList, previousTrailInfo);
     c.findUnitClauses();
-    // c.printClauseList();
-    CLAUSE temp = c.exhaustiveUnitPropagation(originalClauseList);
+    // Set the decision level
+    c.setCurrentDecisionLevel(currentDecisionLevel);
+
+    CLAUSE newClauseList = c.exhaustiveUnitPropagation(originalClauseList);
 
     // We want to preserve the original clause list at the beginning of running the algorithm to get the implications
     if (originalClauseList.empty()) {
-        originalClauseList = temp;
+        originalClauseList = newClauseList;
         originalLiteralList = c.getLiteralList();
     } 
 
@@ -20,51 +24,80 @@ state Algorithm::runAlgorithm(CLAUSE clauseList, LITERAL literalList, int clause
 
     // if current state is not UNDEF, then return the result
     if (currentState != UNDEF) {
-        if (currentState == SAT)
+        if (currentState == SAT) {
             c.printCurrentModel();
-        return currentState;
+            result.currentState = SAT;
+        }
+
+        if (currentState == UNSAT) {
+            // Need to find the conflict clause and return UNSAT to the correct backjump level
+            // First find conflict clause
+            //  //  What do we need for conflict clause? 
+                    // 1. The unit clause which caused the conflict. 
+                    // 2. impledBy for unit literal and negation of unit literal
+            // Second, get backjump level
+            // Third, return three things, {state, conflict clause, backjump level}
+
+            std::vector <int> conflictClause = c.findConflictClause(originalClauseList);
+
+            // Get the backjump level from the conflictClause
+            // Backjump level will be the max decision level of the literals in conflict clause
+            int maxDecisionLevel = c.getBackjumpLevel(conflictClause, c.getCurrentDecisionLevel());
+            std::cout << std::endl << "Backjump level: " << maxDecisionLevel << std::endl;
+
+            result.currentState = UNSAT;
+            result.backjumpLevel = maxDecisionLevel;
+            result.conflictClause = conflictClause;
+
+        }
+        return result;
     }
 
     else {
         // Decide a variable
         int decisionLiteral = c.decide();
-        c.addDecisionVariableToMap(decisionLiteral);
 
         // Add the decision variable to a new instance of clause list and
         // run the algorithm with that.
 
-        CLAUSE tempClauseList = clauseList;
-        clauseInfo decisionClauseInfo;
+        CLAUSE tempClauseList = newClauseList;
         std::vector<int> tempVector(literalCount+1, 0);
         tempVector[abs(decisionLiteral)] = decisionLiteral/abs(decisionLiteral);
-        decisionClauseInfo.clause = tempVector;
-        decisionClauseInfo.unit = true;
-        decisionClauseInfo.unitLiteral = decisionLiteral;
-        tempClauseList[clauseCount+1] = decisionClauseInfo;
+        tempClauseList[clauseCount + 1] = {.clause = tempVector, .unit = true, .unitLiteral = decisionLiteral};
 
-        state newCurrentState = runAlgorithm(tempClauseList, literalList, clauseCount+1, literalCount);
-        
+        resultStruct newCurrentState = runAlgorithm(tempClauseList, literalList, clauseCount + 1, literalCount, currentDecisionLevel + 1, c.getLiteralDecisionLevelList(), c.getTrailInfo());
+
         // Now check if the current state is SAT or UNSAT.
         // If it is Satisfiable, then return satisfiable
-        if (newCurrentState == SAT)
+        // if (newCurrentState.currentState == SAT)
+        //     return newCurrentState;
+
+        // Backjump will be implemented here.
+        // If UNSAT and this is the backjump level, then add the conflict clause and run algorithm again with the same decision.
+
+        if (newCurrentState.currentState == UNSAT && newCurrentState.backjumpLevel == clauseCount + 1) {
+            tempClauseList[clauseCount + 2] = {.clause = newCurrentState.conflictClause, .unit = false};
+            return runAlgorithm(tempClauseList, literalList, clauseCount + 2, literalCount, currentDecisionLevel + 1, c.getLiteralDecisionLevelList(), c.getTrailInfo());
+        }
+
+        else 
             return newCurrentState;
-            
-        // If it is unsatisfiable, then we flip the decision variable, and run the algorithm again.
-        // FOR CDCL -- if it is unsat, and the current decision level is the one to flip, then flip it and return result
 
         // To add some if condition to check backjumping level, below code remains same
-        tempClauseList = clauseList;
-        tempVector[abs(decisionLiteral)] = (-1*decisionLiteral)/abs(decisionLiteral);
-        decisionClauseInfo.clause = tempVector;
-        decisionClauseInfo.unitLiteral = -1 * decisionLiteral;
-        tempClauseList[clauseCount+1] = decisionClauseInfo;
-        return runAlgorithm(tempClauseList, literalList, clauseCount+1, literalCount);
+
+        // decisionLiteral = -decisionLiteral;
+        // std::cout << std::endl << "** (" << currentDecisionLevel << ")" << " FLIPPING DECIDE --> " << decisionLiteral << std::endl;
+        // tempClauseList = newClauseList;
+        // tempVector[abs(decisionLiteral)] = decisionLiteral/abs(decisionLiteral);
+        // tempClauseList[clauseCount + 1] = {.clause = tempVector, .unit = true, .unitLiteral = decisionLiteral};
+        // // This is not decision, but assertion, so decision level will not change.
+        // return runAlgorithm(tempClauseList, literalList, clauseCount+1, literalCount, currentDecisionLevel, c.getLiteralDecisionLevelList(), c.getTrailInfo());
 
         // If not backjump level, return to previous level
         // To add some code to implement that
     }
 
-    return currentState;
+    return result;
 }
 
 void Algorithm::printResult(state& currentState) {

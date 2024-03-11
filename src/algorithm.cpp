@@ -19,17 +19,15 @@ resultStruct Algorithm::runAlgorithm(CLAUSE clauseList, LITERAL literalList, int
     } 
 
     // Step 2. Get the current state after exhaustive UP
-    state currentState;
-    currentState = c.getCurrentState();
+    result.currentState = c.getCurrentState();
 
     // if current state is not UNDEF, then return the result
-    if (currentState != UNDEF) {
-        if (currentState == SAT) {
+    if (result.currentState != UNDEF) {
+        if (result.currentState == SAT) {
             c.printCurrentModel();
-            result.currentState = SAT;
         }
 
-        if (currentState == UNSAT) {
+        if (result.currentState == UNSAT) {
             // Need to find the conflict clause and return UNSAT to the correct backjump level
             // First find conflict clause
             //  //  What do we need for conflict clause? 
@@ -45,10 +43,8 @@ resultStruct Algorithm::runAlgorithm(CLAUSE clauseList, LITERAL literalList, int
             int maxDecisionLevel = c.getBackjumpLevel(conflictClause, c.getCurrentDecisionLevel());
             std::cout << std::endl << "Backjump level: " << maxDecisionLevel << std::endl;
 
-            result.currentState = UNSAT;
             result.backjumpLevel = maxDecisionLevel;
             result.conflictClause = conflictClause;
-
         }
         return result;
     }
@@ -75,8 +71,11 @@ resultStruct Algorithm::runAlgorithm(CLAUSE clauseList, LITERAL literalList, int
         // Backjump will be implemented here.
         // If UNSAT and this is the backjump level, then add the conflict clause and run algorithm again with the same decision.
 
-        if (newCurrentState.currentState == UNSAT && newCurrentState.backjumpLevel == clauseCount + 1) {
-            tempClauseList[clauseCount + 2] = {.clause = newCurrentState.conflictClause, .unit = false};
+        if (newCurrentState.currentState == UNSAT && newCurrentState.backjumpLevel == currentDecisionLevel + 1) {
+            tempVector[abs(decisionLiteral)] = -decisionLiteral/abs(decisionLiteral);
+            tempClauseList[clauseCount + 1] = {.clause = newCurrentState.conflictClause, .unit = false};
+            tempClauseList[clauseCount + 2] = {.clause = tempVector, .unit = true, .unitLiteral = -decisionLiteral};
+            originalClauseList[clauseCount + 1] = tempClauseList[clauseCount + 1];
             return runAlgorithm(tempClauseList, literalList, clauseCount + 2, literalCount, currentDecisionLevel + 1, c.getLiteralDecisionLevelList(), c.getTrailInfo());
         }
 

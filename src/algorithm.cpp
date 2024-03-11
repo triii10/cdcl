@@ -16,6 +16,7 @@ resultStruct Algorithm::runAlgorithm(CLAUSE clauseList, LITERAL literalList, int
     if (originalClauseList.empty()) {
         originalClauseList = newClauseList;
         originalLiteralList = c.getLiteralList();
+        c.printClauseList();
     } 
 
     // Step 2. Get the current state after exhaustive UP
@@ -70,7 +71,6 @@ resultStruct Algorithm::runAlgorithm(CLAUSE clauseList, LITERAL literalList, int
 
         // Backjump will be implemented here.
         // If UNSAT and this is the backjump level, then add the conflict clause and run algorithm again with the same decision.
-
         if (newCurrentState.currentState == UNSAT && newCurrentState.backjumpLevel == currentDecisionLevel + 1) {
             tempVector[abs(decisionLiteral)] = -decisionLiteral/abs(decisionLiteral);
             tempClauseList[clauseCount + 1] = {.unit = false, .unitLiteral = 0,.clause = newCurrentState.conflictClause};

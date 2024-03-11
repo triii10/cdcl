@@ -340,6 +340,7 @@ std::vector<int> CDCL::findConflictClause(CLAUSE& originalClauseList) {
 int CDCL::getBackjumpLevel(std::vector <int> conflictClause, int conflictDecisionLevel) {
 
     int maxDecisionLevel = 0;
+    int lastDecisionLevel = 0;
     // Get the maximum decision level of conflict clause
     // std::cout << "All Decision Levels: ";
     // for (std::unordered_map<int, int>::const_iterator it = literalDecisionLevel.begin(); it != literalDecisionLevel.end(); it++)
@@ -350,12 +351,15 @@ int CDCL::getBackjumpLevel(std::vector <int> conflictClause, int conflictDecisio
         if (conflictClause[i]){
             int currentLiteral = -i*conflictClause[i];
             int decisionLevel = literalDecisionLevel[currentLiteral];
+            lastDecisionLevel = decisionLevel;
             std::cout << decisionLevel << " ";
             if (decisionLevel != conflictDecisionLevel && decisionLevel > maxDecisionLevel)
                 maxDecisionLevel = decisionLevel;
         }
     }
     std::cout << std::endl;
+    if (!maxDecisionLevel)
+        return lastDecisionLevel;
     return maxDecisionLevel;
 }
 

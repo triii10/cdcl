@@ -107,7 +107,7 @@ void Algorithm::printResult(state& currentState) {
     else if (currentState == UNSAT)
         std::cout << std::endl << "UNSATISFIABLE" << std::endl;
     else 
-        std::cout << std::endl << "UNDEFINED" << std::endl;
+        std::cout << std::endl << "UNKNOWN" << std::endl;
 }
 
 std::vector<int> Algorithm::getImpliedByClause(int unitLiteral, int clauseNo) {

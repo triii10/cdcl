@@ -40,6 +40,7 @@ class CDCL {
         CDCL(CLAUSE&, LITERAL&, int, int, std::unordered_map<int, int> = {}, std::vector <trailInfo> = {});
         void printClauseList(const std::unordered_map< int, clauseInfo >&);
         void printClauseList();
+        void deleteTrailInfo(int);
 
         CLAUSE getClauseList();
         LITERAL getLiteralList();
@@ -62,8 +63,8 @@ class CDCL {
             return trail;
         };
     
-        std::unordered_map<int, clauseInfo> exhaustiveUnitPropagation(CLAUSE&);
-        std::unordered_map<int, clauseInfo> unitPropagation(int unitLiteral, CLAUSE&);
+        std::unordered_map<int, clauseInfo> exhaustiveUnitPropagation(CLAUSE&, CLAUSE = {});
+        std::unordered_map<int, clauseInfo> unitPropagation(int unitLiteral, CLAUSE&, bool = false);
         std::vector<int> getImpliedByClause(int, int, CLAUSE&);
         int addDecisionLevelToMap(int);
         int decide();

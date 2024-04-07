@@ -49,6 +49,8 @@ resultStruct Algorithm::runAlgorithm(CLAUSE clauseList, LITERAL literalList, int
 
             result.backjumpLevel = maxDecisionLevel;
             result.conflictClause = conflictClause;
+            originalClauseList[clauseCount + 1] = {.unit = false, .unitLiteral = 0,.clause = conflictClause};
+            clauseCount++;
         }
         return result;
     }
@@ -56,6 +58,7 @@ resultStruct Algorithm::runAlgorithm(CLAUSE clauseList, LITERAL literalList, int
     else {
         // Decide a variable
         int decisionLiteral = c.decide();
+        currentDecisionLevel++;
 
         // Add the decision variable to a new instance of clause list and
         // run the algorithm with that.
@@ -65,7 +68,7 @@ resultStruct Algorithm::runAlgorithm(CLAUSE clauseList, LITERAL literalList, int
         tempVector[abs(decisionLiteral)] = decisionLiteral/abs(decisionLiteral);
         tempClauseList[clauseCount + 1] = {.unit = true, .unitLiteral = decisionLiteral, .clause = tempVector};
 
-        resultStruct newCurrentState = runAlgorithm(tempClauseList, literalList, clauseCount + 1, literalCount, currentDecisionLevel + 1, c.getLiteralDecisionLevelList(), c.getTrailInfo());
+        resultStruct newCurrentState = runAlgorithm(tempClauseList, literalList, clauseCount + 1, literalCount, currentDecisionLevel, c.getLiteralDecisionLevelList(), c.getTrailInfo());
 
         // Now check if the current state is SAT or UNSAT.
         // If it is Satisfiable, then return satisfiable
@@ -74,12 +77,19 @@ resultStruct Algorithm::runAlgorithm(CLAUSE clauseList, LITERAL literalList, int
 
         // Backjump will be implemented here.
         // If UNSAT and this is the backjump level, then add the conflict clause and run algorithm again with the same decision.
-        if (newCurrentState.currentState == UNSAT && newCurrentState.backjumpLevel == currentDecisionLevel + 1) {
+        if (newCurrentState.currentState == UNSAT && newCurrentState.backjumpLevel == currentDecisionLevel) {
+            std::cout << std::endl << "** (" << currentDecisionLevel << ")" << " FLIPPED DECIDE --> " << -decisionLiteral << std::endl;
             tempVector[abs(decisionLiteral)] = -decisionLiteral/abs(decisionLiteral);
+            // tempClauseList = c.unitPropagation(-decisionLiteral, originalClauseList);
+            
+            // Remove the literal from trail list
+            // c.deleteTrailInfo(decisionLiteral);
+            // originalClauseList[clauseCount + 1] = {.unit = false, .unitLiteral = 0,.clause = newCurrentState.conflictClause};
             tempClauseList[clauseCount + 1] = {.unit = false, .unitLiteral = 0,.clause = newCurrentState.conflictClause};
             tempClauseList[clauseCount + 2] = {.unit = true, .unitLiteral = -decisionLiteral, .clause = tempVector};
-            originalClauseList[clauseCount + 1] = tempClauseList[clauseCount + 1];
-            return runAlgorithm(tempClauseList, literalList, clauseCount + 2, literalCount, currentDecisionLevel + 1, c.getLiteralDecisionLevelList(), c.getTrailInfo());
+            
+            tempClauseList = c.unitPropagation(-decisionLiteral, originalClauseList, true);
+            return runAlgorithm(tempClauseList, literalList, clauseCount + 2, literalCount, currentDecisionLevel, c.getLiteralDecisionLevelList(), c.getTrailInfo());
         }
 
         else 

@@ -89,12 +89,14 @@ void CDCL::printLiteralList() {
     std::cout << std::endl << "------" << std::endl;
 }
 
-CLAUSE CDCL::exhaustiveUnitPropagation(CLAUSE& originalClauseList) {
+CLAUSE CDCL::exhaustiveUnitPropagation(CLAUSE& originalClauseList, CLAUSE useThisListInstead) {
     // Unit propagation will find unit clauses, and for each unit clause, it will go through the literalList
     // to find the clauses where the unit literal appears
     // Then, will apply subsumption elimination to remove the clauses, and remove negative occurances of the literal 
 
     CLAUSE& result = clauseList;
+    if (!useThisListInstead.empty())
+        result = useThisListInstead;
     while (findUnitClauses()) {
         int unitLiteral = 0;
         for (CLAUSE::const_iterator it = clauseList.begin(); it != clauseList.end(); it++) {
@@ -117,7 +119,7 @@ CLAUSE CDCL::exhaustiveUnitPropagation(CLAUSE& originalClauseList) {
 }
 
 
-CLAUSE CDCL::unitPropagation(int unitLiteral, CLAUSE& originalClauseList) {
+CLAUSE CDCL::unitPropagation(int unitLiteral, CLAUSE& originalClauseList, bool skipAddToMap) {
     // Unit propagation will find unit clauses, and for each unit clause, it will go through the literalList
     // to find the clauses where the unit literal appears
     // Then, will apply subsumption elimination to remove the clauses, and remove negative occurances of the literal 
@@ -131,7 +133,8 @@ CLAUSE CDCL::unitPropagation(int unitLiteral, CLAUSE& originalClauseList) {
     std::cout << std::endl << "** (" << currentDecisionLevel << ") UP: " << unitLiteral << " --> ";
     model[abs(unitLiteral)] = (abs(unitLiteral) == unitLiteral);
 
-    addDecisionLevelToMap(unitLiteral);
+    if (!skipAddToMap)
+        addDecisionLevelToMap(unitLiteral);
     for (int clause: literalList[unitLiteral]) {
         // Do clause elimination
         std::cout << clause << " ";
@@ -353,13 +356,17 @@ int CDCL::getBackjumpLevel(std::vector <int> conflictClause, int conflictDecisio
             int decisionLevel = literalDecisionLevel[currentLiteral];
             lastDecisionLevel = decisionLevel;
             std::cout << decisionLevel << " ";
-            if (decisionLevel != conflictDecisionLevel && decisionLevel > maxDecisionLevel)
-                maxDecisionLevel = decisionLevel;
+            // if (!decisionLevel)
+                if (decisionLevel != conflictDecisionLevel && decisionLevel > maxDecisionLevel)
+                    maxDecisionLevel = decisionLevel;
         }
     }
     std::cout << std::endl;
     if (!maxDecisionLevel)
-        return lastDecisionLevel;
+        maxDecisionLevel = lastDecisionLevel;
+    if (!maxDecisionLevel)
+        maxDecisionLevel = conflictDecisionLevel;
+    
     return maxDecisionLevel;
 }
 
@@ -385,4 +392,15 @@ std::vector <trailInfo> CDCL::findRoots(int literal) {
     // for (int i = 0; i < consolidatedTrailInfo.size(); i++)
     //     std::cout << consolidatedTrailInfo[i].literal << " ";
     return consolidatedTrailInfo;
+}
+
+void CDCL::deleteTrailInfo(int literal) {
+    int pos = 0;
+    for (int i = 0; i < trail.size(); i++) {
+        if (trail[i].literal == literal) {
+            pos = i;
+            break;
+        }
+    }
+    trail.erase(trail.begin() + pos);
 }
